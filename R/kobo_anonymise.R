@@ -1,6 +1,6 @@
 #' @name kobo_anonymise
 #' @rdname kobo_anonymise
-#' @title  Generate anonymised dataset
+#' @title  Remove direct identifier
 #'
 #' @description  Automatically produce an anonymised dataset in line with the anonymisation plan set up in the xlsform.
 #'
@@ -27,8 +27,6 @@
 #' ----------------\tab-------------- \cr
 #' \strong{Remove}     \tab	Data is removed entirely from the data set. The data is preserved in the original file. \cr
 #' \strong{Reference}   \tab	Data is removed entirely from the data set and is copied into a reference file. A random unique identifier field is added to the reference file and the data set so that they can be joined together in future.  The reference file is never shared and the data is also preserved in the original file. \cr
-#' \strong{Mask}      \tab	The data values are replaced with meaningless values but the categories are preserved. A reference file is created to link the original value with the meaningless value. Typically applied to categorical data. For example, Town names could be masked with random combinations of letters. It would still be possible to perform statisitical analysis on the data but the person running the analysis would not be able to identify the original values, they would only become meaningful when replaced with the original values. The reference file is never shared and the data is also preserved in the original file. \cr
-#' \strong{Generalise}	\tab Continuous data is turned into categorical or ordinal data by summarising it into ranges. For example, Age could be turned into age ranges, Weight could be turned into ranges. It can also apply to categorical data where parent groups are created. For example, illness is grouped into illness type. Generalised data can also be masked for extra anonymisation. The data is preserved in the original file.
 #' }
 #'
 #'
@@ -37,8 +35,6 @@
 #'
 #' @author Edouard Legoupil
 #'
-#' @examples
-#' kobo_anonymise()
 #'
 #' @export kobo_anonymise
 #'
@@ -48,11 +44,14 @@
 #' }
 #'
 
-kobo_anonymise <- function(frame, dico) {
+kobo_anonymise <- function(frame, dico = "dico_form.xls.csv") {
 
   # frame <- household
   # framename <- "household"
   framename <- deparse(substitute(frame))
+
+  mainDir <- kobo_getMainDirectory()
+  dico <- paste(mainDir, "data", dico, sep = "/", collapse = "/")
 
 
   ## Get the anonymisation type defined within the xlsform / dictionnary ######
@@ -149,16 +148,16 @@ kobo_anonymise <- function(frame, dico) {
 
       for (i in 1:nrow(anotype.reference)) {
         # i <- 1
-        cat(paste0(i, "- Replace by row id and create a reference table, the value of: ", as.character(anotype.reference [ i, c("label")]),"\n"))
+        cat(paste0(i, "- Replace by row id and create a reference table, the value of: ", as.character(anotype.reference[ i, c("label")]),"\n"))
 
-        formula1 <-  paste0(framename,".anom.reference1 <- as.data.frame(", framename,"$",as.character(anotype.reference [ i, c("fullname")]),")" )
-        formula11 <- paste0("names(",framename,".anom.reference1) <- \"",anotype.reference [ i, c("fullname")],"\"" )
+        formula1 <-  paste0(framename,".anom.reference1 <- as.data.frame(", framename,"$",as.character(anotype.reference[ i, c("fullname")]),")" )
+        formula11 <- paste0("names(",framename,".anom.reference1) <- \"",anotype.reference[ i, c("fullname")],"\"")
         formula12 <- paste0(framename,".anom.reference <- cbind(",framename,".anom.reference, ", framename,".anom.reference1)")
         formula13 <- paste0("rm(",framename,".anom.reference1) ")
-        formula2 <-  paste0(framename, "$", as.character(anotype.reference [ i, c("fullname")]), " <- row.names(", framename,")" )
+        formula2 <-  paste0(framename, "$", as.character(anotype.reference[ i, c("fullname")]), " <- row.names(", framename,")")
 
 
-        cat(paste0("if (\"", as.character(anotype.reference [ i, c("fullname")]) , "\" %in% names(", framename, ")) {" ), file = "code/temp-reference.R" , sep = "\n", append = TRUE)
+        cat(paste0("if (\"", as.character(anotype.reference[ i, c("fullname")]) , "\" %in% names(", framename, ")) {"), file = "code/temp-reference.R", sep = "\n", append = TRUE)
         cat(paste0(formula1, ""), file = "code/temp-reference.R" , sep = "\n", append = TRUE)
         cat(paste0(formula11, ""), file = "code/temp-reference.R" , sep = "\n", append = TRUE)
         cat(paste0(formula12, ""), file = "code/temp-reference.R" , sep = "\n", append = TRUE)
@@ -177,7 +176,7 @@ kobo_anonymise <- function(frame, dico) {
     } else{}
 
   #### Scramble ###############
-  anotype.scramble <- dico[ which(dico$anonymise=="scramble" & dico$qrepeatlabel == framename),  ]
+  anotype.scramble <- dico[ which(dico$anonymise == "scramble" & dico$qrepeatlabel == framename), ]
 
   if (nrow(anotype.scramble ) > 0) {
     cat(paste0(nrow(anotype.scramble), " variables to scramble \n\n"))
@@ -191,7 +190,7 @@ kobo_anonymise <- function(frame, dico) {
         indic.formula <- paste0(framename,"$",as.character(anotype.scramble[ i, c("fullname")]),
                                 "<- digest(" ,framename,"$",as.character(anotype.scramble[ i, c("fullname")]),
                                 ", algo= \"crc32\")" )
-        cat(paste0("if (\"", as.character(anotype.scramble [ i, c("fullname")]) , "\" %in% names(", framename, ")) {" ), file = "code/temp-remove.R" , sep = "\n", append = TRUE)
+        cat(paste0("if (\"", as.character(anotype.scramble[ i, c("fullname")]) , "\" %in% names(", framename, ")) {" ), file = "code/temp-remove.R" , sep = "\n", append = TRUE)
         cat(paste0(formula, "} else"), file = "code/temp-scramble.R" , sep = "\n", append = TRUE)
         cat("{}", file = "code/temp-scramble.R" , sep = "\n", append = TRUE)
       }
@@ -199,7 +198,7 @@ kobo_anonymise <- function(frame, dico) {
        # source(paste0(getwd(),"/code/temp-scramble.R"))
        # if (file.exists("code/temp-scramble.R")) file.remove("code/temp-scramble.R")
   } else{}  }
-  else { cat("Sorry, it looks like there's nothing to anonymise based on the anonymisation plan within the xlsform dictionnary... \n") }
+  else {cat("Sorry, it looks like there's nothing to anonymise based on the anonymisation plan within the xlsform dictionnary... \n") }
   }
 
  # return(frame)

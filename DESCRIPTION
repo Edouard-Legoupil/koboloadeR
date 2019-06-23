@@ -1,15 +1,17 @@
 Package: koboloadeR
 Type: Package
 Title: Retrieve Data Using the KoBo Toolbox API & Automatise data exploration
-Version: 0.1.5
-Authors@R: c(person("Edouard", "Legoupil", role = c("aut", "cre"),
-                     email = "legoupil@unhcr.org"),
-              person("Elliott", "Messeiller", role = "aut", email = "elliott.messeiller@acted.org"))
+Version: 0.1.6
+Authors@R: c(person("Edouard", "Legoupil", role = c("aut", "cre"),  email = "legoupil@unhcr.org"),
+              person("Maher", "Daoud", role = "aut", email = "daoudma@unhcr.org"),
+              person("Elliott", "Messeiller", role = "ctb", email = "elliott.messeiller@acted.org"),
+              person("Damien", "Seite", role = "ctb", email = "damien.seite@eleve.ensai.fr"))
 Maintainer: Edouard Legoupil <legoupil@unhcr.org>
 Description: This package facilitates the data crunching & exploration for dataset collected using xlsform.
 License: GPL-3
 LazyData: TRUE
 Depends:
+    utils,
     data.table (>= 1.9.4),
     curl,
     RCurl,
@@ -25,9 +27,31 @@ Depends:
     reshape2,
     digest,
     sdcMicro,
-    gdata
+    rJava,
+    xlsx,
+    haven,
+    shinydashboard,
+    shinyalert,
+    ape,
+    sp,
+    gdata,
+    rhandsontable,
+    stringr,
+    stringi,
+    simFrame,
+    classInt,
+    ggrepel,
+    DDIwR,
+    truncnorm,
+    OpenRepGrid
 Suggests:
-    shiny
-URL: https://github.com/unhcr/koboloadeR
+    shiny,
+    testthat (>= 2.1.0),
+    utils,
+    knitr
+URL: https://github.com/unhcr/koboloadeR/docs
 BugReports: https://github.com/unhcr/koboloadeR/issues
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
+VignetteBuilder: utils
+Encoding: UTF-8
+SystemRequirements: Java (>= 8)
