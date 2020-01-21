@@ -7,9 +7,9 @@
 round2(x, n)
 }
 \arguments{
-\item{List}{of integer or numeric to be rounded}
+\item{x}{List of integer or numeric to be rounded}
 
-\item{Rounding}{level}
+\item{n}{Rounding level}
 }
 \value{
 rounded figure.
@@ -18,7 +18,9 @@ rounded figure.
 Create roundup function
 }
 \examples{
+\dontrun{
 round2(x, n)
+}
 
 }
 \author{

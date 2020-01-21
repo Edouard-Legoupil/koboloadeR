@@ -8,16 +8,14 @@
 #' It is assumed that the form is stored in the data folder.
 #'
 #'
-#' @return A "data.table" with the full data dictionnary. To be used in the rest of the analysis.
+#' @return A "data.frame" with the full data dictionnary. To be used in the rest of the analysis.
 #'
 #' @author Edouard Legoupil
 #'
-#' @examples
-#' kobo_dico()
 #'
 #' @examples
 #' \dontrun{
-#' kobo_dico("myform.xls")
+#' kobo_dico(form = "form.xls")
 #' }
 #'
 #' @export kobo_dico
@@ -34,15 +32,25 @@ kobo_dico <- function(form = "form.xls") {
 
 
   ### First review all questions from survey sheet #################################################
-  survey <- read_excel(form_tmp, sheet = "survey")
+  survey <- readxl::read_excel(form_tmp, sheet = "survey")
 
   ## Rename the variable label
   names(survey)[names(survey) == "label::English"] <- "label"
   names(survey)[names(survey) == "label::english"] <- "label"
+  names(survey)[names(survey) == "label::English (en)"] <- "label"
 
 
   names(survey)[names(survey) == "hint::English"] <- "hint"
   names(survey)[names(survey) == "hint::english"] <- "hint"
+  names(survey)[names(survey) == "hint::English (en)"] <- "hint"
+
+
+  names(survey)[names(survey) == "label::Report"] <- "labelReport"
+  names(survey)[names(survey) == "label::Report"] <- "labelReport"
+
+
+  names(survey)[names(survey) == "hint::Report"] <- "hintReport"
+  names(survey)[names(survey) == "hint::Report"] <- "hintReport"
 
 
   cat("Checking now for additional information within your xlsform. Note that you can insert them in the xls and re-run the function! \n \n ")
@@ -54,8 +62,18 @@ kobo_dico <- function(form = "form.xls") {
   {
     cat(" Good: You have a column `labelReport` in your survey worksheet.\n");
   } else
-  {cat(" No column `labelReport` in your survey worksheet. Creating a dummy one for the moment...\n");
-    survey[,"labelReport"] <- substr(survey[,"label"],1,80)}
+  {cat(" No column `labelReport` in your survey worksheet. Creating a dummy one for the moment based on trimmed labels...\n");
+
+    for (i in 1:nrow(survey)){ survey[i,"labelReport"] <- as.character(substr(survey[i,"label"],1,80)) }
+
+  }
+
+  if ("hint" %in% colnames(survey))
+  {
+    cat(" Good: You have a column `hint` in your survey worksheet.\n");
+  } else
+  {cat(" No column `hint` in your survey worksheet. Creating a dummy one for the moment...\n");
+    survey$hint <- ""}
 
 
   if ("hintReport" %in% colnames(survey))
@@ -63,7 +81,8 @@ kobo_dico <- function(form = "form.xls") {
     cat(" Good: You have a column `hintReport` in your survey worksheet.\n");
   } else
   {cat(" No column `hintReport` in your survey worksheet. Creating a dummy one for the moment...\n");
-    survey[,"hintReport"] <- survey[,"hint"]}
+    for (i in 1:nrow(survey)){ survey[i,"hintReport"] <- as.character(survey[,"hint"])}
+    }
 
   if ("disaggregation" %in% colnames(survey))
   {
@@ -240,8 +259,9 @@ kobo_dico <- function(form = "form.xls") {
                                          survey$listname))
 
   ## Remove trailing space
-  survey$listname <- trim(survey$listname)
-  survey$label <- trim(survey$label)
+  survey$listname <- trimws(survey$listname)
+  #glue::trimtrimws(survey$listname)
+  survey$label <- trimws(survey$label)
   #str(survey)
 
   ## Now creating full name in order to match with data variables name
@@ -398,6 +418,7 @@ kobo_dico <- function(form = "form.xls") {
     else {survey[ i, c("fullname")]  <-  paste(survey[ i, c("qgroup")],survey[ i, c("name")],sep = ".") }
   }
 
+
   ## a few colummns to adjust to match questions & choices
   survey$labelchoice <- survey$labelReport #survey$label
   survey$order <- ""
@@ -406,19 +427,24 @@ kobo_dico <- function(form = "form.xls") {
   survey$recategorise <- ""
 
 
-
   ####
   #### Now looking at choices --#########################################################################################################
   #rm(choices)
-  choices <- read_excel(form_tmp, sheet = "choices")
+  choices <- readxl::read_excel(form_tmp, sheet = "choices")
   names(choices)[names(choices) == "label::English"] <- "label"
   names(choices)[names(choices) == "label::english"] <- "label"
+  names(choices)[names(choices) == "label::Report"] <- "labelReport"
+  names(choices)[names(choices) == "label::Report"] <- "labelReport"
   names(choices)[names(choices) == "list name"] <- "listname"
   names(choices)[names(choices) == "list_name"] <- "listname"
 
+
+  ## need to delete empty rows from the form
+  choices <- as.data.frame(choices[!is.na(choices$listname), ])
+
   ## Remove trailing space
-  choices$listname <- trim(choices$listname)
-  choices$label <- trim(choices$label)
+  choices$listname <- trimws(choices$listname)
+  choices$label <- trimws(choices$label)
 
   if ("labelReport" %in% colnames(choices))
   {
@@ -463,7 +489,20 @@ kobo_dico <- function(form = "form.xls") {
 
   names(choices)[names(choices) == "labelReport"] <- "labelchoice"
   #rm(choices)
-  choices <- join(x = choices, y = survey, by = "listname", type = "left")
+
+  ## merge with related questions -
+  names(survey)
+  surveychoice <- survey[ ,c("type" ,    "name" , "label" ,    "labelReport" , "hintReport","chapter",  "variable", "disaggregation" ,
+                             "structuralequation.risk" ,      "structuralequation.coping" ,   "structuralequation.resilience",
+                             "anonymise",  "correlate", "clean", "cluster" ,  "predict",
+                              "mappoint",  "mappoly" , "relevant",  "required",  "constraint","repeat_count",
+                             "listname",  "qrepeat",   "qrepeatlabel",    "qlevel",    "type2",     "qgroup",   "fullname" )]
+  names(surveychoice)[names(surveychoice) == "name"] <- "nameq"
+  #names(surveychoice)[names(surveychoice) == "labelReport"] <- "labelq"
+
+
+  choices <- plyr::join(x = choices, y = surveychoice, by = "listname", type = "left")
+  #choices <- merge(x = choices, y = surveychoice, by = "listname")
 
   choices$type <- with(choices, ifelse(grepl("select_one", ignore.case = TRUE, fixed = FALSE, useBytes = FALSE,  choices$type),
                                        paste0("select_one_d"),choices$type))
@@ -472,33 +511,47 @@ kobo_dico <- function(form = "form.xls") {
                                        paste0("select_multiple"),choices$type))
 
 
-  names(choices)[9] <- "nameq"
-  names(choices)[10] <- "labelq"
-  choices$labelfull <- paste0(choices$labelq, sep = ": ", choices$labelchoice)
-  choices$namefull <- paste0(choices$fullname, sep = ".", choices$name)
 
+  choices$labelReport <- paste0(choices$labelReport, sep = ": ", choices$labelchoice)
+  choices$fullname <- paste0(choices$fullname, sep = ".", choices$name)
+
+
+  #names(choices2)[names(choices2) == "namefull"] <- "fullname"
+ # names(choices2)[names(choices2) == "labelfull"] <- "labelReport"
+ # choices2$labelReport <- choices2$label
 
 
   #### Now Row bing questions & choices########################################################################################################
   #
+
+
+
+
+
     #names(choices) -"type", "name", "namefull",  "labelfull", "listname", "qrepeat", "qlevel", "qgroup"
     ## not kept: "nameq"     "labelq"   ,"fullname", "label",
     #names(survey) - "type" "name",  "fullname", "label",  "listname", "qrepeat"m  "qlevel",   "qgroup"
-  choices2 <- choices[ ,c("type", "name", "namefull",  "labelfull", "labelReport","hintReport", "chapter","disaggregation","correlate", "structuralequation.risk","structuralequation.coping","structuralequation.resilience","anonymise",
-                          "clean","cluster","predict","mappoint","mappoly",
+  choices2 <- choices[ ,c("type", "name", "fullname", "label", "labelReport","hintReport","chapter",
+                          "disaggregation","correlate",
+                          "structuralequation.risk","structuralequation.coping", "structuralequation.resilience",
+                          "anonymise",  "clean","cluster","predict","mappoint","mappoly",
                           "relevant",  "required", "constraint", "repeat_count",
-                          "listname", "qrepeat","qrepeatlabel",  "qlevel", "qgroup", "labelchoice",
+                          "listname", "qrepeat","qrepeatlabel",  "qlevel", "qgroup",
+                          "labelchoice",
                          #"repeatsummarize",
                          "variable",
                          #"indicator","indicatorgroup","indicatortype", "indicatorlevel","dataexternal","indicatorcalculation","indicatornormalisation",
                          "order", "weight","score", "recategorise")]
 
 
-  names(choices2)[names(choices2) == "namefull"] <- "fullname"
-  names(choices2)[names(choices2) == "labelfull"] <- "label"
 
 
-  survey2 <-    survey[,c("type", "name",  "fullname", "label", "labelReport","hintReport", "chapter", "disaggregation","correlate",  "structuralequation.risk","structuralequation.coping","structuralequation.resilience","anonymise",
+
+
+
+  survey2 <-    survey[,c("type", "name",  "fullname", "label", "labelReport","hintReport", "chapter",
+                          "disaggregation","correlate",
+                          "structuralequation.risk","structuralequation.coping","structuralequation.resilience","anonymise",
                           "clean","cluster","predict","mappoint","mappoly",
                           "relevant",  "required", "constraint", "repeat_count",
                           "listname", "qrepeat","qrepeatlabel",  "qlevel",   "qgroup", "labelchoice",
@@ -521,12 +574,12 @@ kobo_dico <- function(form = "form.xls") {
 
 
   ## Remove trailing space
-  dico$fullname <- trim(dico$fullname)
-  dico$listname <- trim(dico$listname)
+  dico$fullname <- trimws(dico$fullname)
+  dico$listname <- trimws(dico$listname)
 
 
   ## Trim long label...
-  dico$label <- substring(dico$label, 0, 85)
+  #dico$label <- substring(dico$label, 0, 85)
   dico$labelReport <- substring(dico$labelReport, 0, 85)
 
   ## A few fix on the dico
@@ -551,7 +604,7 @@ kobo_dico <- function(form = "form.xls") {
   #} else { dico$type <- dico$type
    #  cat("Note that select_one & select_multiple questions within REPEAT part are converted to integer (results are summed up).\n")
 
-  write.csv(dico, paste0(mainDir,"/data/dico_",form,".csv"), row.names = FALSE, na = "")
+  utils::write.csv(dico, paste0(mainDir,"/data/dico_",form,".csv"), row.names = FALSE, na = "")
 
  # f_csv(dico)
 #  return(dico)

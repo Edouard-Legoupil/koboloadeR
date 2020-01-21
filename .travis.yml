@@ -1,15 +1,15 @@
-# R for travis: see documentation at https://docs.travis-ci.com/user/languages/r
-
 language: r
 
 sudo: required
 
-#warnings_are_errors: true
-#sudo: false
-#cache: packages
+env: _R_CHECK_CRAN_INCOMING_=FALSE
 
 r_packages:
-  - koboloadeR
+  - covr
+  - devtools
+
+r_github_packages:
+  - codecov/koboloadeR
 
 after_success:
-  - Rscript -e 'covr::codecov()'
+  - Rscript -e 'library(covr);codecov()'

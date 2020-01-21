@@ -7,7 +7,11 @@
 kobo_prediction_report(dico, frame, registry)
 }
 \arguments{
-\item{kobo}{or odk dataset to use}
+\item{dico}{generated from kobo_dico)}
+
+\item{frame}{odk dataset to use}
+
+\item{registry}{file with registration information}
 }
 \description{
 Automatically produce prediction reports
@@ -26,8 +30,6 @@ and select the most accurate one.
 The user needs to have previously loaded the registry, survey and form files
 }
 \examples{
-kobo_prediction_report()
-
 \dontrun{
 kobo_prediction_report("myform.xls")
 }

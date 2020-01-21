@@ -20,7 +20,9 @@
 #'
 #'
 #'
-#' @param  kobo or odk dataset to use
+#' @param  frame odk dataset to use
+#' @param registry file with registration information
+#' @param dico  generated from kobo_dico)
 #'
 #'
 #' @author Damien Seite, Edouard Legoupil
@@ -29,8 +31,6 @@
 #' @export kobo_prediction_report
 #'
 #'
-#' @examples
-#' kobo_prediction_report()
 #'
 #' @examples
 #' \dontrun{
@@ -53,7 +53,7 @@ kobo_prediction_report <- function(dico, frame, registry) {
   mainDirroot <- getwd()
   framename <- deparse(substitute(frame))
   progrescase <- deparse(substitute(registry))
-  library(plyr)
+
   ## Check that all those selectedVars are in the frame ####
   check <- as.data.frame(names(frame))
   names(check)[1] <- "fullname"
@@ -62,17 +62,17 @@ kobo_prediction_report <- function(dico, frame, registry) {
 
 
   selected.predict <- dico[ which(dico$predict == "yes" & dico$type %in% c("select_one","select_one_d",'integer')), ]
-  selected.predict <- join(x = selected.predict, y = check, by = "fullname", type = "left")
+  selected.predict <- plyr::join(x = selected.predict, y = check, by = "fullname", type = "left")
   selected.predict <- subset(selected.predict, fullname %in% check$fullname)
 
-  library(stringr)
+
   #selected.predict <- selected.predict[!is.na(selected.predict$id), ]
   selected.predictVars <- as.character(selected.predict[ , c("fullname")])
   #selected.clusterVars2 <- as.character(selected.cluster[ , c("name")])
-  selected.predictVars2 <- str_replace_all(as.character(selected.predict[ , c("name")]), "_", ".")
+  selected.predictVars2 <- stringr::str_replace_all(as.character(selected.predict[ , c("name")]), "_", ".")
 
   selected.id <- dico[ which(dico$predict == "id"), ]
-  selected.id <- join(x = selected.id, y = check, by = "fullname", type = "left")
+  selected.id <- plyr::join(x = selected.id, y = check, by = "fullname", type = "left")
   selected.id <- selected.id[!is.na(selected.id$id),  ]
   selected.idVars <- as.character(selected.id[ , c("fullname")])
 
@@ -81,7 +81,7 @@ kobo_prediction_report <- function(dico, frame, registry) {
   ## Join Survey & Registration ######
 
   survey$demo.reg_question.unhcr_case_number <- as.character(subset(survey, select = selected.idVars)[,1])
-  surveypro <- join(x = survey, y = progrescase, by = "demo.reg_question.unhcr_case_number", type = "inner")
+  surveypro <- plyr::join(x = survey, y = progrescase, by = "demo.reg_question.unhcr_case_number", type = "inner")
   cat(round(nrow(surveypro)/nrow(progrescase)*100, digits = 1),"%", "of registered people are also in the household survey dataset" )
 
   if (nrow(selected.predict) == 0) { cat("You have not selected variables to predict \n") }

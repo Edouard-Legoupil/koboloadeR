@@ -14,8 +14,6 @@
 #'
 #' @author Maher Daoud
 #'
-#' @examples
-#' kobo_prepare_form()
 #'
 #' @examples
 #' \dontrun{
@@ -47,7 +45,7 @@ kobo_prepare_form <- function(form = "form.xls") {
 
     # Survey sheet ######################################
     survey <- tryCatch({
-      as.data.frame(read_excel(form_tmp, sheet = "survey"),
+      as.data.frame(readxl::read_excel(form_tmp, sheet = "survey"),
                     stringsAsFactors = FALSE) #read survey sheet from the form
     }, error = function(err) {
       data.frame( #if it doesn't exist, we need to create empty dataframe with those fields
@@ -96,9 +94,11 @@ kobo_prepare_form <- function(form = "form.xls") {
     ## Rename the variable label
     names(survey)[tolower(names(survey)) == "label::english"] <- "label"
     names(survey)[tolower(names(survey)) == "hint::english"] <- "hint"
+    names(survey)[tolower(names(survey)) == "label::english (en)"] <- "label"
+    names(survey)[tolower(names(survey)) == "hint::english (en)"] <- "hint"
 
     if (sum(namesOfSur %in% colnames(survey)) != length(namesOfSur)) {
-      return(structure('Please make sure the survey sheet have the following columns "type", "name" , "label" or "label::English" , "hint" or "hint::English" , "relevant" , "required" , "constraint" , "repeat_count"', class = "try-error"))
+      return(structure('Please make sure the survey sheet have the following columns "type", "name" , "label" or "label::English" , "hint" or "hint::English"', class = "try-error"))
     }
 
     if ("hint" %in% colnames(survey)) {
@@ -152,6 +152,7 @@ kobo_prepare_form <- function(form = "form.xls") {
       cat(" Good: You have a column `chapter` in your survey worksheet. This will be used to breakdown the generated report\n");
     } else {
       cat(" No column `chapter` in your survey worksheet. Creating a dummy one for the moment ...\n");
+     # survey$chapter <- character()
       survey$chapter <- ""
     }
     namesOfSur <- c(namesOfSur,"chapter")
@@ -168,6 +169,7 @@ kobo_prepare_form <- function(form = "form.xls") {
       cat(" Good: You have a column `correlate` in your survey worksheet. This will be used to define the variables that should be checked for correlation between each others.\n");
     } else {
       cat(" No column `correlate` in your survey worksheet. Creating a dummy one for the moment...\n");
+      #survey$correlate <- character()
       survey$correlate <- ""
     }
     namesOfSur <- c(namesOfSur,"correlate")
@@ -176,6 +178,7 @@ kobo_prepare_form <- function(form = "form.xls") {
       cat(" Good: You have a column `variable` in your survey worksheet. This will be used to flag ordinal variable.\n");
     } else {
       cat(" No column `variable` in your survey worksheet. Creating a dummy one for the moment (see readme file). ...\n");
+      #survey$variable <- character()
       survey$variable <- ""
     }
     namesOfSur <- c(namesOfSur,"variable")
@@ -184,6 +187,7 @@ kobo_prepare_form <- function(form = "form.xls") {
       cat(" Good: You have a column `disaggregation` in your survey worksheet.\n");
     } else {
       cat(" No column `disaggregation` in your survey worksheet. Creating a dummy one for the moment...\n");
+      #survey$disaggregation <- character()
       survey$disaggregation <- ""
     }
     namesOfSur <- c(namesOfSur,"disaggregation")
@@ -201,6 +205,7 @@ kobo_prepare_form <- function(form = "form.xls") {
       cat(" Good: You have a column `cluster` in your survey worksheet. This will be used to flag variables to be used for clustering exploration.\n");
     } else {
       cat(" No column `cluster` in your survey worksheet. Creating a dummy one for the moment (see readme file). ...\n");
+      #survey$cluster <- character()
       survey$cluster <- ""
     }
     namesOfSur <- c(namesOfSur,"cluster")
@@ -249,7 +254,32 @@ kobo_prepare_form <- function(form = "form.xls") {
     }
     namesOfSur <- c(namesOfSur,"structuralequation.risk","structuralequation.coping","structuralequation.resilience")
 
+    ### order in user friendly    way
 
+    namesOfSur <- c( "type",
+     "name",
+     "labelReport",
+     "hintReport",
+     "chapter",
+     "anonymise",
+     "disaggregation",
+     "correlate",
+     "variable",
+     "clean"     ,
+     "cluster"  ,
+     "predict" ,
+     "mappoint",
+     "mappoly",
+     "structuralequation.risk",
+     "structuralequation.coping",
+     "structuralequation.resilience",
+     "label",
+      "hint",
+      "required",
+      "relevant",
+      "constraint",
+      "calculation",
+     "repeat_count" )
 
     ## Avoid columns without names
     survey <- survey[ ,namesOfSur]
@@ -279,16 +309,16 @@ kobo_prepare_form <- function(form = "form.xls") {
       xlsx::Fill(backgroundColor = "GREY_50_PERCENT",foregroundColor = "GREY_50_PERCENT",
            pattern = "SOLID_FOREGROUND")  +
       xlsx::Border(color = "GREY_80_PERCENT", position = c("TOP", "BOTTOM"), "BORDER_THIN")
-    cs1 <- CellStyle(wb) +
+    cs1 <- xlsx::CellStyle(wb) +
       xlsx::Font(wb, isBold = TRUE, isItalic = FALSE, color = "black") +
-      xlsx::Fill(backgroundColor = "SKY_BLUE", foregroundColor = "SKY_BLUE",
-           pattern = "SOLID_FOREGROUND")   +
-      xlsx::Border(color = "SKY_BLUE", position = c("TOP", "BOTTOM"), "BORDER_THIN")
-    cs2 <- CellStyle(wb) +
-      xlsx::Font(wb, isBold = TRUE, isItalic = FALSE, color = "white") +
       xlsx::Fill(backgroundColor = "orange", foregroundColor = "orange",
-           pattern = "SOLID_FOREGROUND")    +
+           pattern = "SOLID_FOREGROUND")   +
       xlsx::Border(color = "orange", position = c("TOP", "BOTTOM"), "BORDER_THIN")
+    cs2 <- xlsx::CellStyle(wb) +
+      xlsx::Font(wb, isBold = TRUE, isItalic = FALSE, color = "white") +
+      xlsx::Fill(backgroundColor = "SKY_BLUE", foregroundColor = "SKY_BLUE",
+           pattern = "SOLID_FOREGROUND")    +
+      xlsx::Border(color = "SKY_BLUE", position = c("TOP", "BOTTOM"), "BORDER_THIN")
     rows <- xlsx::getRows(surveySheet) # get rows of survey Sheet
     cells <- xlsx::getCells(rows) # get cells of survey Sheet
 
@@ -349,7 +379,7 @@ kobo_prepare_form <- function(form = "form.xls") {
 
     # Choices sheet ######################################
     choices <- tryCatch({
-      as.data.frame(read_excel(form_tmp, sheet = "choices"),
+      as.data.frame(readxl::read_excel(form_tmp, sheet = "choices"),
                     stringsAsFactors = FALSE) #read survey sheet from the form
     }, error = function(err) {
       data.frame( #if it doesn't exist, we need to create empty dataframe with those fields
@@ -367,11 +397,12 @@ kobo_prepare_form <- function(form = "form.xls") {
     cat("################################# \n")
     ## Rename the variable label
     names(choices)[tolower(names(choices)) == "label::english"] <- "label"
+    names(choices)[tolower(names(choices)) == "label::english (en)"] <- "label"
 
     namesOfCho <- c("list_name", "name", "label")
 
     if (sum(namesOfCho %in% colnames(choices)) != length(namesOfCho)) {
-      return(structure('Please make sure the choices sheet have the following columns "type", "name" , "label"', class = "try-error"))
+      return(structure('Please make sure the choices sheet have the following columns "list_name", "name" , "label"', class = "try-error"))
     }
 
     ### add column if not present
@@ -446,7 +477,7 @@ kobo_prepare_form <- function(form = "form.xls") {
 
 
       settings <- tryCatch({
-        as.data.frame(read_excel(form_tmp, sheet = "settings"),
+        as.data.frame(readxl::read_excel(form_tmp, sheet = "settings"),
                       stringsAsFactors = FALSE)
       }, error = function(err) {
         data.frame(
@@ -494,7 +525,7 @@ kobo_prepare_form <- function(form = "form.xls") {
     cat("############################################ \n\n")
 
     analysisSettings <- tryCatch({
-      as.data.frame(read_excel(form_tmp, sheet = "analysisSettings"),
+      as.data.frame(readxl::read_excel(form_tmp, sheet = "analysisSettings"),
                     stringsAsFactors = FALSE)
     }, error = function(err) {
       data.frame(
@@ -668,7 +699,7 @@ kobo_prepare_form <- function(form = "form.xls") {
       analysisSettings <- rbind(analysisSettings,
                                 data.frame(name = "sample_type",
                                            label = "Sample type of the project",
-                                           options = "1. No sampling(type 1) 2. Cluster sample (type 2) 3. Stratified sample (type 3)",
+                                           options = "1. No sampling (type 1) 2. Cluster sample (type 2) 3. Stratified sample (type 3)",
                                            value = "No sampling (type 1)",
                                            path = NA,
                                            stringsAsFactors = FALSE)
@@ -758,7 +789,7 @@ kobo_prepare_form <- function(form = "form.xls") {
                                 data.frame(name = "cleaning_log",
                                            label = "cleaning log plan for the project",
                                            options = "1. Yes 2. No, 3. csv filename",
-                                           value = "2. No",
+                                           value = "No",
                                            path = NA,
                                            stringsAsFactors = FALSE)
       )
@@ -858,7 +889,7 @@ kobo_prepare_form <- function(form = "form.xls") {
 
 
     indicator <- tryCatch({
-      as.data.frame(read_excel(form_tmp, sheet = "indicator"),stringsAsFactors = FALSE)
+      as.data.frame(readxl::read_excel(form_tmp, sheet = "indicator"),stringsAsFactors = FALSE)
     }, error = function(err) {
       data.frame(
         type = character(),
@@ -869,7 +900,6 @@ kobo_prepare_form <- function(form = "form.xls") {
         listname = character(),
         calculation = character(),
         chapter = character(),
-        variable = character(),
         disaggregation = character(),
         correlate = character(),
         anonymise = character(),
@@ -932,12 +962,6 @@ kobo_prepare_form <- function(form = "form.xls") {
     } else {
       cat(" No column `chapter` in your indicator worksheet. Creating a dummy one for the moment...\n");
       indicator$chapter <- ""
-    }
-    if ("variable" %in% colnames(indicator)) {
-      cat(" Good: You have a column `variable` in your indicator worksheet.\n");
-    } else {
-      cat(" No column `variable` in your indicator worksheet. Creating a dummy one for the moment...\n");
-      indicator$variable <- ""
     }
     if ("disaggregation" %in% colnames(indicator)) {
       cat(" Good: You have a column `disaggregation` in your indicator worksheet.\n");
@@ -1008,7 +1032,7 @@ kobo_prepare_form <- function(form = "form.xls") {
 
     indicator <- indicator[ ,c("type","fullname","labelReport", "hintReport",
                                "frame", "listname","calculation",
-                               "chapter", "variable", "disaggregation", "correlate",
+                               "chapter", "disaggregation", "correlate",
                                "anonymise", "cluster", "predict", "variable", "mappoint", "mappoly",
                                "structuralequation.risk","structuralequation.coping","structuralequation.resilience")]
 
