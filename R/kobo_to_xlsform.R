@@ -28,14 +28,16 @@
 #'
 #'
 
-kobo_to_xlsform <- function(df,form = "form.xls",
+kobo_to_xlsform <- function(df,form = "form.xlsx",
                             n=100) {
-
+  #is_labelled <- function(x) inherits(x, c("labelled", "haven_labelled"))
   stopifnot(is.data.frame(df))
-  # df <- data.df
+  # df <- households_all
   ## str(df)
   # n = 10
-  df[sapply(df, is.labelled)] <- lapply(df[sapply(df, is.labelled)], as.factor)
+  #df[sapply(df, is.labelled)] <- lapply(df[sapply(df, is.labelled)], as.factor)
+  #df[sapply(df, sjlabelled::is.labelled)] <- lapply(df[sapply(df, sjlabelled::is.labelled)], as.factor)
+
   ## build survey sheet
   survey <- data.frame( type = rep(as.character(NA), ncol(df)),
                         name = names(df),
@@ -94,21 +96,21 @@ kobo_to_xlsform <- function(df,form = "form.xls",
     }   else {cat("This is not a factor \n")}
   }
 
-  wb <- xlsx::createWorkbook(type = "xls")
+  wb <- openxlsx::createWorkbook()
+  
   sheetname <- "survey"
-  surveySheet <- xlsx::createSheet(wb, sheetname)
-  xlsx::addDataFrame(survey, surveySheet, col.names = TRUE, row.names = FALSE)
+  openxlsx::createSheet(wb, sheetname)
+  openxlsx::writeData(wb, sheetname, survey, withFilter = TRUE)
 
   sheetname <- "choices"
-  choicesSheet <- xlsx::createSheet(wb, sheetName = sheetname)
-  xlsx::addDataFrame(choices, choicesSheet, col.names = TRUE, row.names = FALSE)
-
+  openxlsx::createSheet(wb, sheetname)
+  openxlsx::writeData(wb, sheetname, choices, withFilter = TRUE)
 
   mainDir <- kobo_getMainDirectory()
   form_tmp <- paste(mainDir, "data", form, sep = "/", collapse = "/")
 
   if (file.exists(form_tmp)) file.remove(form_tmp)
-  xlsx::saveWorkbook(wb, form_tmp)
+  openxlsx::saveWorkbook(wb, form_tmp)
   cat("XLS form has been successfully generated")
 }
 NULL

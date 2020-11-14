@@ -15,7 +15,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' kobo_get_begin_repeat("myform.xls")
+#' kobo_get_begin_repeat("myform.xlsx")
 #' }
 #'
 #' @export kobo_get_begin_repeat
@@ -23,10 +23,10 @@
 #'
 #'
 
-kobo_get_begin_repeat <- function(form = "form.xls") {
+kobo_get_begin_repeat <- function(form = "form.xlsx") {
 
   mainDir <- kobo_getMainDirectory()
-  form_tmp <- paste(mainDir, "data", form, sep = "/", collapse = "/")
+  form_tmp <- paste(mainDir, "data-raw", form, sep = "/", collapse = "/")
 
   ### First review all questions from survey sheet #################################################
   survey <- tryCatch({
@@ -41,7 +41,7 @@ kobo_get_begin_repeat <- function(form = "form.xls") {
   })
 
   survey$type <- tolower(survey$type)
-  result <- survey[ survey$type == "begin repeat" | survey$type == "begin_repeat" | survey$type == "begin-repeat", ]
+  result <- survey[ which(survey$type == "begin repeat" | survey$type == "begin_repeat" | survey$type == "begin-repeat"), ]
   result <- result$name
 
   if (length(result) == 0) {

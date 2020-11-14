@@ -15,24 +15,26 @@
 #'
 #' @examples
 #' \dontrun{
-#' kobo_dico(form = "form.xls")
+#' kobo_dico(form = "form.xlsx")
 #' }
 #'
 #' @export kobo_dico
 #'
 
-kobo_dico <- function(form = "form.xls") {
+kobo_dico <- function(form = "form.xlsx") {
 
   #kobo_form(formid, user = user, api = api)
   cat("\n Your form should be placed within the `data` folder. \n \n")
   # read the survey tab of ODK from
   mainDir <- kobo_getMainDirectory()
 
-  form_tmp <- paste(mainDir, "data", form, sep = "/", collapse = "/")
+  form_tmp <- paste(mainDir, "data-raw", form, sep = "/", collapse = "/")
 
 
   ### First review all questions from survey sheet #################################################
   survey <- readxl::read_excel(form_tmp, sheet = "survey")
+
+  cat(" if you see any error here, check for duplicates in column names.. you will need to fix this...")
 
   ## Rename the variable label
   names(survey)[names(survey) == "label::English"] <- "label"
@@ -64,7 +66,7 @@ kobo_dico <- function(form = "form.xls") {
   } else
   {cat(" No column `labelReport` in your survey worksheet. Creating a dummy one for the moment based on trimmed labels...\n");
 
-    for (i in 1:nrow(survey)){ survey[i,"labelReport"] <- as.character(substr(survey[i,"label"],1,80)) }
+    for (i in 1:nrow(survey)) { survey[i,"labelReport"] <- as.character(substr(survey[i,"label"],1,80)) }
 
   }
 
@@ -81,12 +83,12 @@ kobo_dico <- function(form = "form.xls") {
     cat(" Good: You have a column `hintReport` in your survey worksheet.\n");
   } else
   {cat(" No column `hintReport` in your survey worksheet. Creating a dummy one for the moment...\n");
-    for (i in 1:nrow(survey)){ survey[i,"hintReport"] <- as.character(survey[,"hint"])}
-    }
+    for (i in 1:nrow(survey)) { survey[i,"hintReport"] <- as.character(survey[,"hint"])}
+  }
 
   if ("disaggregation" %in% colnames(survey))
   {
-  cat(" Good: You have a column `disaggregation` in your survey worksheet.\n");
+    cat(" Good: You have a column `disaggregation` in your survey worksheet.\n");
   } else
   {cat(" No column `disaggregation` in your survey worksheet. Creating a dummy one for the moment...\n");
     survey$disaggregation <- ""}
@@ -98,33 +100,19 @@ kobo_dico <- function(form = "form.xls") {
   {cat("  No column `correlate` in your survey worksheet. Creating a dummy one for the moment...\n");
     survey$correlate <- ""}
 
+  if ("report" %in% colnames(survey))
+  {
+    cat("  Good: You have a column `report` in your survey worksheet. This will be used to breakdown the generated report\n");
+  } else
+  {cat("  No column `report` in your survey worksheet. Creating a dummy one for the moment ...\n");
+    survey$report <- ""}
+
   if ("chapter" %in% colnames(survey))
   {
     cat("  Good: You have a column `chapter` in your survey worksheet. This will be used to breakdown the generated report\n");
   } else
   {cat("  No column `chapter` in your survey worksheet. Creating a dummy one for the moment ...\n");
     survey$chapter <- ""}
-
-  if ("structuralequation.risk" %in% colnames(survey))
-  {
-    cat("  Good: You have a column `structuralequation.risk` in your survey worksheet. This will be used to configure the vulnerability structural equation model\n");
-  } else
-  {cat("  No column `structuralequation.risk` in your survey worksheet. Creating a dummy one for the moment...\n");
-    survey$structuralequation.risk <- ""}
-
-  if ("structuralequation.coping" %in% colnames(survey))
-  {
-    cat("  Good: You have a column `structuralequation.coping` in your survey worksheet. This will be used to configure the vulnerability structural equation model\n");
-  } else
-  {cat("4- No column `structuralequation.coping` in your survey worksheet. Creating a dummy one for the moment...\n");
-    survey$structuralequation.coping <- ""}
-
-  if ("structuralequation.resilience" %in% colnames(survey))
-  {
-    cat("  Good: You have a column `structuralequation.resilience` in your survey worksheet. This will be used to configure the vulnerability structural equation model\n");
-  } else
-  {cat("  No column `structuralequation.resilience` in your survey worksheet. Creating a dummy one for the moment...\n");
-    survey$structuralequation.resilience <- ""}
 
 
   if ("anonymise" %in% colnames(survey))
@@ -208,16 +196,17 @@ kobo_dico <- function(form = "form.xls") {
   ## Avoid columns without names
   survey <- survey[ ,c("type",   "name" ,  "label", "labelReport", "hintReport",
                        #"repeatsummarize",
-                       "variable","disaggregation",  "chapter", "structuralequation.risk","structuralequation.coping","structuralequation.resilience",
+                       "variable","disaggregation",  "report", "chapter",
+
                        "anonymise","correlate","clean","cluster","predict","mappoint","mappoly",
-                      # "indicator","indicatorgroup","indicatortype",
-                      # "indicatorlevel","dataexternal","indicatorcalculation","indicatornormalisation"
+                       # "indicator","indicatorgroup","indicatortype",
+                       # "indicatorlevel","dataexternal","indicatorcalculation","indicatornormalisation"
                        #"indicator","select", "Comment", "indicatordirect", "indicatorgroup" ## This indicator reference
                        # "label::English",
                        #"label::Arabic" ,"hint::Arabic",
                        # "hint::English", "relevant",  "required", "constraint",   "constraint_message::Arabic",
                        # "constraint_message::English", "default",  "appearance", "calculation",  "read_only"  ,
-                        "relevant",  "required", "constraint", "repeat_count"
+                       "relevant",  "required", "constraint", "repeat_count"
   )]
 
   ## need to delete empty rows from the form
@@ -272,7 +261,7 @@ kobo_dico <- function(form = "form.xls") {
   for (i in 2:nrow(survey))
   {
     #Check based on repeat type
-         if (survey[ i, c("type")] %in% c("begin repeat","begin_repeat") && survey[ i - 1, c("qrepeat")] == "")                  {survey[ i, c("qrepeat")]  <- "repeatnest1"}
+    if (survey[ i, c("type")] %in% c("begin repeat","begin_repeat") && survey[ i - 1, c("qrepeat")] == "")                  {survey[ i, c("qrepeat")]  <- "repeatnest1"}
     else if (survey[ i, c("type")] %in% c("begin repeat","begin_repeat") && survey[ i - 1, c("qrepeat")] == "repeatnest1")       {survey[ i, c("qrepeat")]  <-  "repeatnest2"}
     else if (!(survey[ i, c("type")] %in% c("end repeat","end_repeat"))  && survey[ i - 1, c("qrepeat")] == "repeatnest1")       {survey[ i, c("qrepeat")]  <-  "repeatnest1"}
     else if (!(survey[ i, c("type")] %in% c("end repeat","end_repeat"))  && survey[ i - 1, c("qrepeat")] == "repeatnest2")       {survey[ i, c("qrepeat")]  <-  "repeatnest2"}
@@ -292,15 +281,15 @@ kobo_dico <- function(form = "form.xls") {
   {
     # Now insert the repeat label based on name
     # i <-230
-         if ( survey[ i, c("type")] == "begin repeat" )                                                {survey[ i, c("qrepeatlabel")]  <- survey[ i, c("name")]}
+    if ( survey[ i, c("type")] == "begin repeat" )                                                {survey[ i, c("qrepeatlabel")]  <- survey[ i, c("name")]}
     else if ( survey[ i, c("type")] != "end repeat"   && survey[ i - 1, c("qrepeat")] == "repeatnest1" )   {survey[ i, c("qrepeatlabel")]  <- survey[ i - 1, c("qrepeatlabel")] }
     else if ( survey[ i, c("type")] != "end repeat"   && survey[ i - 1, c("qrepeat")] == "repeatnest2" )   {survey[ i, c("qrepeatlabel")]  <- survey[ i - 1, c("qrepeatlabel")] }
 
     else if ( survey[ i, c("type")] == "end repeat"   && survey[ i - 1, c("qrepeat")] == "repeatnest1")    {survey[ i, c("qrepeatlabel")]  <-  "MainDataFrame"}
 
     else if ( survey[ i, c("type")] == "end repeat"   && survey[ i - 1, c("qrepeat")] == "repeatnest2")    { nestabove <- as.character(survey[ i - 1, c("qrepeatlabel")])
-                                                                                                       nestabovenum <- as.integer(which(nestable$name == nestabove ) - 1)
-                                                                                                      survey[ i, c("qrepeatlabel")]  <-  as.character( nestable[ nestabovenum , 1] ) }
+    nestabovenum <- as.integer(which(nestable$name == nestabove ) - 1)
+    survey[ i, c("qrepeatlabel")]  <-  as.character( nestable[ nestabovenum , 1] ) }
 
     ## Sometimes it seems that we get an underscore for type
     else if ( survey[ i, c("type")] == "begin_repeat" )                                                {survey[ i, c("qrepeatlabel")]  <- survey[ i, c("name")]}
@@ -310,8 +299,8 @@ kobo_dico <- function(form = "form.xls") {
     else if ( survey[ i, c("type")] == "end_repeat"   && survey[ i - 1, c("qrepeat")] == "repeatnest1")    {survey[ i, c("qrepeatlabel")]  <-  "MainDataFrame"}
 
     else if ( survey[ i, c("type")] == "end_repeat"   && survey[ i - 1, c("qrepeat")] == "repeatnest2")    { nestabove <- as.character(survey[ i - 1, c("qrepeatlabel")])
-                                                                                                        nestabovenum <- as.integer(which(nestable$name == nestabove ) - 1)
-                                                                                                        survey[ i, c("qrepeatlabel")]  <-  as.character( nestable[ nestabovenum , 1] ) }
+    nestabovenum <- as.integer(which(nestable$name == nestabove ) - 1)
+    survey[ i, c("qrepeatlabel")]  <-  as.character( nestable[ nestabovenum , 1] ) }
 
 
     else   {survey[ i, c("qrepeatlabel")]  <-  "MainDataFrame"}
@@ -358,8 +347,8 @@ kobo_dico <- function(form = "form.xls") {
 
   ### Get question groups in order to match the variable name
   ## Concatenation ofqlevel & qrepeat & type
-     survey$type2 <- survey$type
-     survey$type2[survey$type2 %in% c("begin_group","begin group","end_group","end group")]
+  survey$type2 <- survey$type
+  survey$type2[survey$type2 %in% c("begin_group","begin group","end_group","end group")]
   ## We need to handle situation with both repeat & group
   ## set <- as.data.frame(unique(dico[c("qlevel","qrepeat", "type")]))
   ## So 12 cases to handle
@@ -373,41 +362,41 @@ kobo_dico <- function(form = "form.xls") {
     #i <- 54
     #i <- 20
     #survey[ 113, c("qgroup")]
-            if (survey[ i, c("qlevel")]  %in% c("level1","level2","level3","level4","level5") &&
-               survey[ i, c("qrepeat")] %in% c("", "repeatnest1", "repeatnest2") &&
-              !(survey[ i, c("type")]   %in% c("begin_group","begin group","end_group","end group","begin_repeat","begin repeat","end_repeat","end repeat")) )
+    if (survey[ i, c("qlevel")]  %in% c("level1","level2","level3","level4","level5") &&
+        survey[ i, c("qrepeat")] %in% c("", "repeatnest1", "repeatnest2") &&
+        !(survey[ i, c("type")]   %in% c("begin_group","begin group","end_group","end group","begin_repeat","begin repeat","end_repeat","end repeat")) )
 
-      {survey[ i, c("qgroup")] <- survey[ i - 1, c("qgroup")]
+    {survey[ i, c("qgroup")] <- survey[ i - 1, c("qgroup")]
 
 
     } else if (survey[ i, c("qlevel")]   %in% c("level1") &&
-              survey[ i, c("qrepeat")]  %in% c("", "repeatnest1", "repeatnest2") &&
-              survey[ i, c("type")]     %in% c("begin_group","begin group")  )
+               survey[ i, c("qrepeat")]  %in% c("", "repeatnest1", "repeatnest2") &&
+               survey[ i, c("type")]     %in% c("begin_group","begin group")  )
 
-       {survey[ i, c("qgroup")] <- survey[ i, c("name")]
+    {survey[ i, c("qgroup")] <- survey[ i, c("name")]
 
     } else if (survey[ i, c("qlevel")]   %in% c("level2","level3","level4","level5") &&
-              survey[ i, c("qrepeat")]  %in% c("", "repeatnest1", "repeatnest2") &&
-              survey[ i, c("type")]     %in% c("begin_group","begin group") )
+               survey[ i, c("qrepeat")]  %in% c("", "repeatnest1", "repeatnest2") &&
+               survey[ i, c("type")]     %in% c("begin_group","begin group") )
 
-       {survey[ i, c("qgroup")] <- paste(survey[ i - 1, c("qgroup")], survey[ i, c("name")],sep = ".")
+    {survey[ i, c("qgroup")] <- paste(survey[ i - 1, c("qgroup")], survey[ i, c("name")],sep = ".")
 
     } else if (survey[ i, c("qlevel")]   %in% c("level1","level2","level3","level4","level5")  &&
-              survey[ i, c("qrepeat")]  %in% c("repeatnest1", "repeatnest2") &&
-              survey[ i, c("type")]     %in% c("begin_repeat","begin repeat")   )
+               survey[ i, c("qrepeat")]  %in% c("repeatnest1", "repeatnest2") &&
+               survey[ i, c("type")]     %in% c("begin_repeat","begin repeat")   )
 
-      {survey[ i, c("qgroup")] <- paste(survey[ i - 1, c("qgroup")], survey[ i, c("qrepeatlabel")], sep = ".")
+    {survey[ i, c("qgroup")] <- paste(survey[ i - 1, c("qgroup")], survey[ i, c("qrepeatlabel")], sep = ".")
 
     } else if (survey[ i, c("qlevel")]   %in% c("level1","level2","level3","level4","level5") &&
-              survey[ i, c("qrepeat")]  %in% c("", "repeatnest1", "repeatnest2") &&
-              survey[ i, c("type")]     %in% c("end_group","end group","end_repeat","end repeat") )
+               survey[ i, c("qrepeat")]  %in% c("", "repeatnest1", "repeatnest2") &&
+               survey[ i, c("type")]     %in% c("end_group","end group","end_repeat","end repeat") )
 
-       {survey[ i, c("qgroup")] <- substr(survey[ i - 1, c("qgroup")] ,0, regexpr("\\.[^\\.]*$", survey[ i - 1, c("qgroup")] ) - 1)
+    {survey[ i, c("qgroup")] <- substr(survey[ i - 1, c("qgroup")] ,0, regexpr("\\.[^\\.]*$", survey[ i - 1, c("qgroup")] ) - 1)
 
     } else  {survey[ i, c("qgroup")]  <- ""}
   }
 
-
+  cat(" \n Now Building full name\n \n")
   survey$fullname <- ""
   ## levels(as.factor(survey$type))
   ## Need to loop around the data frame in order to concatenate full name as observed in data dump
@@ -418,7 +407,7 @@ kobo_dico <- function(form = "form.xls") {
     else {survey[ i, c("fullname")]  <-  paste(survey[ i, c("qgroup")],survey[ i, c("name")],sep = ".") }
   }
 
-
+  cat(" Adding column before rbind \n")
   ## a few colummns to adjust to match questions & choices
   survey$labelchoice <- survey$labelReport #survey$label
   survey$order <- ""
@@ -430,22 +419,31 @@ kobo_dico <- function(form = "form.xls") {
   ####
   #### Now looking at choices --#########################################################################################################
   #rm(choices)
+  cat(" \n loading choices\n \n")
   choices <- readxl::read_excel(form_tmp, sheet = "choices")
+  cat(" if you see any error here, check for duplicates in column names.. you will need to fix this...")
+
+  cat(" Checking for label report \n")
   names(choices)[names(choices) == "label::English"] <- "label"
   names(choices)[names(choices) == "label::english"] <- "label"
+  names(choices)[names(choices) == "label::English (en)"] <- "label"
+
   names(choices)[names(choices) == "label::Report"] <- "labelReport"
   names(choices)[names(choices) == "label::Report"] <- "labelReport"
   names(choices)[names(choices) == "list name"] <- "listname"
   names(choices)[names(choices) == "list_name"] <- "listname"
 
-
+  cat(" Deleting empty rows \n")
   ## need to delete empty rows from the form
   choices <- as.data.frame(choices[!is.na(choices$listname), ])
 
+  cat(" Remove trailing space \n")
   ## Remove trailing space
   choices$listname <- trimws(choices$listname)
   choices$label <- trimws(choices$label)
 
+
+  cat(" Checking column if analysis plan already inserted \n")
   if ("labelReport" %in% colnames(choices))
   {
     cat(" Good: You have a column `labelReport` in your `choices` worksheet.\n");
@@ -492,10 +490,9 @@ kobo_dico <- function(form = "form.xls") {
 
   ## merge with related questions -
   names(survey)
-  surveychoice <- survey[ ,c("type" ,    "name" , "label" ,    "labelReport" , "hintReport","chapter",  "variable", "disaggregation" ,
-                             "structuralequation.risk" ,      "structuralequation.coping" ,   "structuralequation.resilience",
+  surveychoice <- survey[ ,c("type" ,    "name" , "label" ,    "labelReport" , "hintReport","report","chapter",  "variable", "disaggregation" ,
                              "anonymise",  "correlate", "clean", "cluster" ,  "predict",
-                              "mappoint",  "mappoly" , "relevant",  "required",  "constraint","repeat_count",
+                             "mappoint",  "mappoly" , "relevant",  "required",  "constraint","repeat_count",
                              "listname",  "qrepeat",   "qrepeatlabel",    "qlevel",    "type2",     "qgroup",   "fullname" )]
   names(surveychoice)[names(surveychoice) == "name"] <- "nameq"
   #names(surveychoice)[names(surveychoice) == "labelReport"] <- "labelq"
@@ -517,8 +514,8 @@ kobo_dico <- function(form = "form.xls") {
 
 
   #names(choices2)[names(choices2) == "namefull"] <- "fullname"
- # names(choices2)[names(choices2) == "labelfull"] <- "labelReport"
- # choices2$labelReport <- choices2$label
+  # names(choices2)[names(choices2) == "labelfull"] <- "labelReport"
+  # choices2$labelReport <- choices2$label
 
 
   #### Now Row bing questions & choices########################################################################################################
@@ -528,20 +525,19 @@ kobo_dico <- function(form = "form.xls") {
 
 
 
-    #names(choices) -"type", "name", "namefull",  "labelfull", "listname", "qrepeat", "qlevel", "qgroup"
-    ## not kept: "nameq"     "labelq"   ,"fullname", "label",
-    #names(survey) - "type" "name",  "fullname", "label",  "listname", "qrepeat"m  "qlevel",   "qgroup"
-  choices2 <- choices[ ,c("type", "name", "fullname", "label", "labelReport","hintReport","chapter",
+  #names(choices) -"type", "name", "namefull",  "labelfull", "listname", "qrepeat", "qlevel", "qgroup"
+  ## not kept: "nameq"     "labelq"   ,"fullname", "label",
+  #names(survey) - "type" "name",  "fullname", "label",  "listname", "qrepeat"m  "qlevel",   "qgroup"
+  choices2 <- choices[ ,c("type", "name", "fullname", "label", "labelReport","hintReport","report","chapter",
                           "disaggregation","correlate",
-                          "structuralequation.risk","structuralequation.coping", "structuralequation.resilience",
                           "anonymise",  "clean","cluster","predict","mappoint","mappoly",
                           "relevant",  "required", "constraint", "repeat_count",
                           "listname", "qrepeat","qrepeatlabel",  "qlevel", "qgroup",
                           "labelchoice",
-                         #"repeatsummarize",
-                         "variable",
-                         #"indicator","indicatorgroup","indicatortype", "indicatorlevel","dataexternal","indicatorcalculation","indicatornormalisation",
-                         "order", "weight","score", "recategorise")]
+                          #"repeatsummarize",
+                          "variable",
+                          #"indicator","indicatorgroup","indicatortype", "indicatorlevel","dataexternal","indicatorcalculation","indicatornormalisation",
+                          "order", "weight","score", "recategorise")]
 
 
 
@@ -549,9 +545,9 @@ kobo_dico <- function(form = "form.xls") {
 
 
 
-  survey2 <-    survey[,c("type", "name",  "fullname", "label", "labelReport","hintReport", "chapter",
+  survey2 <-    survey[,c("type", "name",  "fullname", "label", "labelReport","hintReport","report", "chapter",
                           "disaggregation","correlate",
-                          "structuralequation.risk","structuralequation.coping","structuralequation.resilience","anonymise",
+                          "anonymise",
                           "clean","cluster","predict","mappoint","mappoly",
                           "relevant",  "required", "constraint", "repeat_count",
                           "listname", "qrepeat","qrepeatlabel",  "qlevel",   "qgroup", "labelchoice",
@@ -602,12 +598,11 @@ kobo_dico <- function(form = "form.xls") {
   #if (dico$qrepeat== "repeat" && dico$type %in% c("select_one_d", "select_multiple")) {dico$type <- "integer"
   #                               cat("Note that select_one & select_multiple questions within REPEAT part are converted to integer (results are summed up).\n")
   #} else { dico$type <- dico$type
-   #  cat("Note that select_one & select_multiple questions within REPEAT part are converted to integer (results are summed up).\n")
+  #  cat("Note that select_one & select_multiple questions within REPEAT part are converted to integer (results are summed up).\n")
 
   utils::write.csv(dico, paste0(mainDir,"/data/dico_",form,".csv"), row.names = FALSE, na = "")
-
- # f_csv(dico)
-#  return(dico)
+  #save(dico, file =  paste0(mainDir,"/data/dico_",form,".rda"))
+  # f_csv(dico)
+  #  return(dico)
 }
 NULL
-
